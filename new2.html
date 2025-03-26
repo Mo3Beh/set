@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shape Match Game</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    body {
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+    
+    h1 {
+      color: #333;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    
+    .game-container {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 20px;
+      max-width: 1200px;
+      width: 100%;
+    }
+    
+    .game-board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(4, 1fr);
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    
+    .card {
+      background-color: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 10px;
+      min-height: 120px;
+      cursor: pointer;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      position: relative;
+    }
+    
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    }
+    
+    .card.selected {
+      border: 3px solid #4CAF50;
+    }
+    
+    .card.correct {
+      border: 3px solid gold;
+      animation: pulse 1s infinite;
+    }
+    
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.7); }
+      70% { box-shadow: 0 0 0 15px rgba(255, 215, 0, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); }
+    }
+    
+    .shape-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      height: 100%;
+    }
+    
+    .shape {
+      width: 30px;
+      height: 30px;
+      stroke-width: 2;
+    }
+    
+    .pattern-fill {
+      stroke-width: 2;
+      stroke-dasharray: 4;
+    }
+    
+    .sidebar {
+      background-color: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    
+    .timer {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      font-weight: bold;
+      color: #333;
+    }
+    
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .btn {
+      padding: 10px 15px;
+      border: none;
+      border-radius: 5px;
+      background-color: #4CAF50;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.3s ease, transform 0.2s;
+    }
+    
+    .btn:hover {
+      background-color: #45a049;
+      transform: scale(1.05);
+    }
+    
+    .btn:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+    
+    /* Swap button specific styling */
+    .swap-btn.active {
+      background-color: #FF9800;
+    }
+    
+    .help {
+      position: relative;
+      display: inline-block;
+      padding-top: 50px;
+    }
+    
+    .help-icon {
+      width: 60px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #f0f0f0;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    
+    .help-content {
+      display: none;
+      position: absolute;
+      bottom: 50%;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #3f3f3f;
+      color: white;
+      padding: 15px;
+      border-radius: 15px;
+      width: 200px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      z-index: 100;
+      font-size: 0.9rem;
+    }
+    
+    .help:hover .help-content {
+      display: block;
+    }
+    
+    .score {
+      font-size: 1.2rem;
+      text-align: center;
+    }
+    
+    /* Remove swap-mode checkbox and use button */
+    .swap-mode {
+      margin-top: 20px;
+      display: flex;
+      justify-content: center;
+    }
+    
+    /* Responsive styles */
+    @media (max-width: 900px) {
+      .game-container {
+        grid-template-columns: 1fr;
+      }
+      
+      .sidebar {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: space-around;
+      }
+      
+      .help-content {
+        width: 200px;
+      }
+    }
+    
+    @media (max-width: 600px) {
+      .game-board {
+        gap: 10px;
+      }
+      
+      .card {
+        min-height: 80px;
+      }
+      
+      .shape {
+        width: 20px;
+        height: 20px;
+      }
+      
+      .timer {
+        font-size: 1.5rem;
+      }
+    }
+    
+    #congratsModal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    
+    .modal-content {
+      background-color: white;
+      padding: 30px;
+      border-radius: 10px;
+      text-align: center;
+      max-width: 500px;
+      width: 90%;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      transform: scale(0.7);
+      opacity: 0;
+      transition: all 0.3s ease;
+    }
+    
+    .modal-show .modal-content {
+      transform: scale(1);
+      opacity: 1;
+    }
+    
+    .confetti {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background-color: #f00;
+      opacity: 0.7;
+    }
+    #continueBtn {
+        margin-top: 10px;
+      }
+      .continueBt {
+        margin-top: 10px;
+        padding-top: 10px;
+      }
+  </style>
+</head>
+<body>
+  <h1>Shape Match Game</h1>
+  
+  <div class="game-container">
+    <div class="game-board" id="gameBoard"></div>
+    
+    <div class="sidebar">
+      <div class="timer" id="timer">00:00</div>
+      
+      <div class="controls">
+        <button class="btn" id="newGameBtn">New Game</button>
+        <div class="swap-mode">
+          <button class="btn swap-btn" id="swapBtn">Enable Swap Mode</button>
+        </div>
+
+      
+      <div class="score">
+        <p>Sets Found: <span id="setsFound">0</span></p>
+        <p>Time: <span id="totalTime">00:00</span></p>
+
+        <div class="help">
+            <div class="help-icon">?</div>
+            <div class="help-content">
+              <p><strong>Game Rules:</strong></p>
+              <p>Find 3 cards where each property (number of shapes, shape type, color, and coloring style) is either all the same or all different across the 3 cards.</p>
+              <p>Toggle Swap Mode to rearrange cards by clicking on two cards consecutively.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div id="congratsModal">
+    <div class="modal-content">
+      <h2>Congratulations!</h2>
+      <p>You found a correct set!</p>
+      <p>Keep going to find more sets.</p>
+      <button class="btn" id="continueBtn">Continue</button>
+    </div>
+  </div>
+  
+  <script>
+    // Game variables
+    let cards = [];
+    let selectedCards = [];
+    let setsFound = 0;
+    let startTime;
+    let timerInterval;
+    let swapMode = false;
+    let swapCards = [];
+
+    // Constants for card properties
+    const SHAPES = ['triangle', 'circle', 'square'];
+    const COLORS = ['red', 'green', 'blue'];
+    const FILL_TYPES = ['none', 'solid', 'pattern'];
+    const SHAPE_COUNTS = [1, 2, 3];
+
+    // Initialize the game
+    document.addEventListener('DOMContentLoaded', function() {
+      initializeGame();
+      
+      // Event Listeners
+      document.getElementById('newGameBtn').addEventListener('click', initializeGame);
+      document.getElementById('swapBtn').addEventListener('click', function() {
+        swapMode = !swapMode;
+        // Update button style and text to reflect current state
+        this.classList.toggle('active', swapMode);
+        this.textContent = swapMode ? 'Disable Swap Mode' : 'Enable Swap Mode';
+        resetSelection();
+      });
+      document.getElementById('continueBtn').addEventListener('click', function() {
+        document.getElementById('congratsModal').style.display = 'none';
+      });
+    });
+
+    function initializeGame() {
+      resetGame();
+      generateCards();
+      renderCards();
+      startTimer();
+    }
+
+    function resetGame() {
+      cards = [];
+      selectedCards = [];
+      resetSelection();
+      clearInterval(timerInterval);
+      document.getElementById('timer').textContent = '00:00';
+      document.getElementById('setsFound').textContent = '0';
+      setsFound = 0;
+    }
+
+    function generateCards() {
+      // Create distribution of shape counts (4 cards with 1 shape, 4 with 2, 4 with 3)
+      const shapeCountDistribution = [1,1,1,1,2,2,2,2,3,3,3,3];
+      shuffleArray(shapeCountDistribution);
+
+      // Create a preset color distribution ensuring each color appears at least 3 times.
+      let colorDistribution = ['red', 'red', 'red', 'green', 'green', 'green', 'blue', 'blue', 'blue'];
+      // Add 3 extra colors randomly chosen from COLORS
+      for(let i = 0; i < 3; i++){
+        colorDistribution.push(COLORS[Math.floor(Math.random() * COLORS.length)]);
+      }
+      shuffleArray(colorDistribution);
+      
+      // Generate 12 cards with properties
+      for (let i = 0; i < 12; i++) {
+        cards.push({
+          id: i,
+          shapeCount: shapeCountDistribution[i],
+          shape: SHAPES[Math.floor(Math.random() * SHAPES.length)],
+          color: colorDistribution[i],
+          fillType: FILL_TYPES[Math.floor(Math.random() * FILL_TYPES.length)]
+        });
+      }
+      
+      // Make sure there's at least one valid set
+      if (!hasValidSet()) {
+        cards = [];
+        generateCards();
+      }
+    }
+
+    function hasValidSet() {
+      // Check all possible combinations of 3 cards
+      for (let i = 0; i < cards.length - 2; i++) {
+        for (let j = i + 1; j < cards.length - 1; j++) {
+          for (let k = j + 1; k < cards.length; k++) {
+            if (isValidSet(cards[i], cards[j], cards[k])) {
+              return true;
+            }
+          }
+        }
+      }
+      return false;
+    }
+
+    function isValidSet(card1, card2, card3) {
+      // Check shape count, shape type, color, and fill type
+      const validShapeCount = checkProperty(card1.shapeCount, card2.shapeCount, card3.shapeCount);
+      const validShape = checkProperty(card1.shape, card2.shape, card3.shape);
+      const validColor = checkProperty(card1.color, card2.color, card3.color);
+      const validFill = checkProperty(card1.fillType, card2.fillType, card3.fillType);
+      return validShapeCount && validShape && validColor && validFill;
+    }
+
+    function checkProperty(prop1, prop2, prop3) {
+      // All same OR all different
+      return (prop1 === prop2 && prop2 === prop3) || (prop1 !== prop2 && prop2 !== prop3 && prop1 !== prop3);
+    }
+
+    function renderCards() {
+      const gameBoard = document.getElementById('gameBoard');
+      gameBoard.innerHTML = '';
+      
+      cards.forEach(card => {
+        const cardElement = document.createElement('div');
+        cardElement.classList.add('card');
+        cardElement.dataset.id = card.id;
+        
+        const shapeContainer = document.createElement('div');
+        shapeContainer.classList.add('shape-container');
+        
+        // Add shapes based on shapeCount
+        for (let i = 0; i < card.shapeCount; i++) {
+          const shape = createShape(card.shape, card.color, card.fillType);
+          shapeContainer.appendChild(shape);
+        }
+        
+        cardElement.appendChild(shapeContainer);
+        
+        cardElement.addEventListener('click', function() {
+          handleCardClick(card, cardElement);
+        });
+        
+        gameBoard.appendChild(cardElement);
+      });
+    }
+
+    function createShape(shapeType, color, fillType) {
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("viewBox", "0 0 40 40");
+      svg.classList.add("shape");
+      
+      let shapeElement;
+      switch (shapeType) {
+        case 'triangle':
+          shapeElement = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+          shapeElement.setAttribute("points", "20,5 35,35 5,35");
+          break;
+        case 'circle':
+          shapeElement = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+          shapeElement.setAttribute("cx", "20");
+          shapeElement.setAttribute("cy", "20");
+          shapeElement.setAttribute("r", "15");
+          break;
+        case 'square':
+          shapeElement = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+          shapeElement.setAttribute("x", "5");
+          shapeElement.setAttribute("y", "5");
+          shapeElement.setAttribute("width", "30");
+          shapeElement.setAttribute("height", "30");
+          break;
+      }
+      
+      // Apply stroke color
+      shapeElement.setAttribute("stroke", color);
+      
+      if (fillType === 'none') {
+        shapeElement.setAttribute("fill", "none");
+      } else if (fillType === 'solid') {
+        shapeElement.setAttribute("fill", color);
+    } else if (fillType === 'pattern') {
+  // Create a unique pattern ID for each shape
+  const patternId = 'pattern-' + Math.random().toString(36).substr(2, 9);
+  const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+  const pattern = document.createElementNS("http://www.w3.org/2000/svg", "pattern");
+  pattern.setAttribute("id", patternId);
+  pattern.setAttribute("patternUnits", "userSpaceOnUse");
+  pattern.setAttribute("width", "4");
+  pattern.setAttribute("height", "4");
+
+  const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+  rect.setAttribute("width", "2");
+  rect.setAttribute("height", "4");
+  // Use the passed color for the pattern
+  rect.setAttribute("fill", color);
+  
+  pattern.appendChild(rect);
+  defs.appendChild(pattern);
+  svg.appendChild(defs);
+  
+  // Use the unique pattern ID
+  shapeElement.setAttribute("fill", `url(#${patternId})`);
+}
+
+      
+      svg.appendChild(shapeElement);
+      return svg;
+    }
+
+    function handleCardClick(card, cardElement) {
+      if (swapMode) {
+        handleSwapMode(card, cardElement);
+      } else {
+        handleSelectionMode(card, cardElement);
+      }
+    }
+
+    function handleSwapMode(card, cardElement) {
+      if (swapCards.length === 0) {
+        swapCards.push({ card, element: cardElement });
+        cardElement.classList.add('selected');
+      } else if (swapCards.length === 1) {
+        swapCards.push({ card, element: cardElement });
+        // Swap the cards
+        const index1 = cards.findIndex(c => c.id === swapCards[0].card.id);
+        const index2 = cards.findIndex(c => c.id === swapCards[1].card.id);
+        [cards[index1], cards[index2]] = [cards[index2], cards[index1]];
+        renderCards();
+        swapCards = [];
+      }
+    }
+
+    function handleSelectionMode(card, cardElement) {
+      const isSelected = selectedCards.some(c => c.id === card.id);
+      
+      if (isSelected) {
+        selectedCards = selectedCards.filter(c => c.id !== card.id);
+        cardElement.classList.remove('selected');
+      } else {
+        selectedCards.push(card);
+        cardElement.classList.add('selected');
+        if (selectedCards.length === 3) {
+          if (isValidSet(selectedCards[0], selectedCards[1], selectedCards[2])) {
+            handleValidSet();
+          } else {
+            setTimeout(() => {
+              resetSelection();
+            }, 1000);
+          }
+        }
+      }
+    }
+
+    function handleValidSet() {
+      selectedCards.forEach(card => {
+        const cardElement = document.querySelector(`.card[data-id="${card.id}"]`);
+        cardElement.classList.add('correct');
+      });
+      setsFound++;
+      document.getElementById('setsFound').textContent = setsFound;
+      setTimeout(() => {
+        showCongratsModal();
+        setTimeout(() => {
+          replaceFoundSet();
+        }, 1000);
+      }, 1000);
+    }
+
+    function replaceFoundSet() {
+      cards = cards.filter(card => !selectedCards.some(c => c.id === card.id));
+      // Generate new cards with new unique IDs
+      const newCardIds = [12, 13, 14];
+      for (let i = 0; i < 3; i++) {
+        cards.push({
+          id: newCardIds[i],
+          shapeCount: SHAPE_COUNTS[Math.floor(Math.random() * SHAPE_COUNTS.length)],
+          shape: SHAPES[Math.floor(Math.random() * SHAPES.length)],
+          color: COLORS[Math.floor(Math.random() * COLORS.length)],
+          fillType: FILL_TYPES[Math.floor(Math.random() * FILL_TYPES.length)]
+        });
+      }
+      resetSelection();
+      renderCards();
+    }
+
+    function resetSelection() {
+      selectedCards = [];
+      swapCards = [];
+      document.querySelectorAll('.card').forEach(card => {
+        card.classList.remove('selected');
+        card.classList.remove('correct');
+      });
+    }
+
+    function startTimer() {
+      startTime = new Date();
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        const elapsedTime = Math.floor((new Date() - startTime) / 1000);
+        const minutes = Math.floor(elapsedTime / 60).toString().padStart(2, '0');
+        const seconds = (elapsedTime % 60).toString().padStart(2, '0');
+        document.getElementById('timer').textContent = `${minutes}:${seconds}`;
+        document.getElementById('totalTime').textContent = `${minutes}:${seconds}`;
+      }, 1000);
+    }
+
+    function showCongratsModal() {
+      const modal = document.getElementById('congratsModal');
+      modal.style.display = 'flex';
+      setTimeout(() => {
+        modal.classList.add('modal-show');
+        createConfetti();
+      }, 100);
+    }
+
+    function createConfetti() {
+      const modal = document.getElementById('congratsModal');
+      for (let i = 0; i < 100; i++) {
+        const confetti = document.createElement('div');
+        confetti.classList.add('confetti');
+        confetti.style.left = Math.random() * 100 + '%';
+        confetti.style.top = -20 + 'px';
+        confetti.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 50%)`;
+        confetti.style.width = Math.random() * 10 + 5 + 'px';
+        confetti.style.height = Math.random() * 10 + 5 + 'px';
+        modal.appendChild(confetti);
+        const duration = Math.random() * 3 + 2;
+        const delay = Math.random() * 2;
+        confetti.style.animation = `fall ${duration}s linear ${delay}s 1 forwards`;
+        const keyframes = `
+          @keyframes fall {
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(${window.innerHeight}px) rotate(${Math.random() * 360}deg); opacity: 0; }
+          }
+        `;
+        const style = document.createElement('style');
+        style.innerHTML = keyframes;
+        document.head.appendChild(style);
+        setTimeout(() => {
+          confetti.remove();
+          style.remove();
+        }, (duration + delay) * 1000);
+      }
+    }
+
+    // Utility function to shuffle array
+    function shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+  </script>
+</body>
+</html>
